@@ -58,15 +58,14 @@ def home():
 
 @app.route('/test-webhook', methods=['POST'])
 def test_webhook():
-    # Logger l'ensemble de la requête
-    logger.debug("Requête reçue :")
+    # Logger les en-têtes et les données de la requête
     logger.debug("En-têtes : %s", request.headers)
-    logger.debug("Données : %s", request.get_data(as_text=True))
+    logger.debug("Données form-encoded : %s", request.form)
 
     # Répondre avec les données reçues pour débogage
     response_data = {
         "headers": dict(request.headers),
-        "body": request.json
+        "body": request.form
     }
     return jsonify(response_data), 200
 
