@@ -2,7 +2,6 @@ from flask import Flask, request
 import hashlib
 import hmac
 import os
-import psycopg2
 
 
 app = Flask(__name__)
@@ -13,14 +12,14 @@ user = os.environ.get('REDSHIFT_USER')
 password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce = os.environ.get('WCKEY')
 
-def create_redshift_connection():
-    return psycopg2.connect(
-        host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com',
-        port=5439,
-        dbname=dbname,
-        user=user,
-        password=password
-)
+#def create_redshift_connection():
+#    return psycopg2.connect(
+#        host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com',
+#        port=5439,
+#        dbname=dbname,
+#        user=user,
+#        password=password
+#)
 
 
 def verify_woocommerce_signature(request, woocommerce):
