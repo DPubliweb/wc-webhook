@@ -22,23 +22,28 @@ woocommerce_secret = os.environ.get('WC_KEY')
 
 
 def get_dpe_data(note_dpe):
-    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com', port=5439)
-    print('Début de requête')
-    with conn.cursor() as cursor:
-        query = """
-        SELECT DISTINCT p.n_dpe AS num_dpe, MAX(lastname) AS nom, MAX(firstname) AS prenom,
-        MAX(tel_mobile) AS tel_mobile, MAX(email) AS email, MAX(zipcode) AS code_postal,
-        MAX(etiquette_dpe) AS note_dpe  
-        FROM vw_principale_tel_mobile p
-        LEFT JOIN fact_dpe d ON d.n_dpe = p.n_dpe
-        WHERE type_batiment = 'maison' AND etiquette_dpe = %s
-        GROUP BY p.n_dpe
-        LIMIT 75;
-        """
-        cursor.execute(query, (note_dpe,))
-        rows = cursor.fetchall()
-    conn.close()
-    return rows
+    try:
+        conn = psycopg2.connect(dbname=dbname, user=user, password=password, host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com', port=5439)
+        print('Début de requête')
+        with conn.cursor() as cursor:
+            query = """
+            SELECT DISTINCT p.n_dpe AS num_dpe, MAX(lastname) AS nom, MAX(firstname) AS prenom,
+            MAX(tel_mobile) AS tel_mobile, MAX(email) AS email, MAX(zipcode) AS code_postal,
+            MAX(etiquette_dpe) AS note_dpe  
+            FROM vw_principale_tel_mobile p
+            LEFT JOIN fact_dpe d ON d.n_dpe = p.n_dpe
+            WHERE type_batiment = 'maison' AND etiquette_dpe = %s
+            GROUP BY p.n_dpe
+            LIMIT 75;
+            """
+            cursor.execute(query, (note_dpe,))
+            rows = cursor.fetchall()
+            print('Requête terminée')
+        conn.close()
+        return rows
+    except Exception as e:
+        print(f"Erreur lors de l'exécution de la requête : {e}")
+
 
 
 def verify_woocommerce_signature(request, woocommerce_secret):
