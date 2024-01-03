@@ -24,7 +24,7 @@ def verify_woocommerce_signature(request, woocommerce_secret):
     generated_signature = hmac.new(woocommerce_secret.encode(), request_payload.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(received_signature, generated_signature)
 
-@app.route('/webhook', methods=['POST'])
+@app.route('/wcwebhook', methods=['POST'])
 def webhook():
     if not verify_woocommerce_signature(request, woocommerce_secret):
         logger.error("Signature non valide, requête suspecte")
