@@ -20,14 +20,26 @@ woocommerce_secret = os.environ.get('WCKEY')
 
 def verify_woocommerce_signature(request, woocommerce_secret):
     received_signature = request.headers.get('X-WC-Webhook-Signature')
+    
+    # Vérifier si la signature reçue est présente
+    if received_signature is None:
+        return False
+
     request_payload = request.get_data(as_text=True)
     generated_signature = hmac.new(woocommerce_secret.encode(), request_payload.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(received_signature, generated_signature)
 
+
 @app.route('/wcwebhook', methods=['POST'])
 def webhook():
+    # Vérifier si la clé secrète est définie
+    if woocommerce_secret is None:
+        logger.error("La clé secrète WooCommerce n'est pas définie.")
+        return 'Erreur de configuration du serveur', 500
+
+    # Vérifier et traiter la signature du webhook
     if not verify_woocommerce_signature(request, woocommerce_secret):
-        logger.error("Signature non valide, requête suspecte")
+        logger.error("Signature non valide ou manquante dans la requête.")
         return 'Signature non valide', 403
 
     try:
