@@ -34,15 +34,21 @@ def get_dpe_data(note_dpe):
             LEFT JOIN fact_dpe d ON d.n_dpe = p.n_dpe
             WHERE type_batiment = 'maison' AND etiquette_dpe = %s
             GROUP BY p.n_dpe
-            LIMIT 75;
+            LIMIT 5;  -- Réduire la limite à 5 pour les tests
             """
             cursor.execute(query, (note_dpe,))
             rows = cursor.fetchall()
-            print('Requête terminée')
+            print('Requête terminée, nombre de lignes récupérées :', len(rows))
+
+            # Afficher les premières lignes pour le débogage
+            for row in rows[:5]:  # Limiter l'affichage aux 5 premières lignes
+                print(row)
+
         conn.close()
         return rows
     except Exception as e:
         print(f"Erreur lors de l'exécution de la requête : {e}")
+        return None
 
 
 
