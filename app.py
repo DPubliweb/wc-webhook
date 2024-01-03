@@ -2,9 +2,15 @@ from flask import Flask, request
 import hashlib
 import hmac
 import os
-
+import logging
 
 app = Flask(__name__)
+
+# Configuration de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Variables d'environnement
 host = os.environ.get('REDSHIFT_HOST')
 port = os.environ.get('REDSHIFT_PORT')
 dbname = os.environ.get('REDSHIFT_DBNAME')
@@ -12,38 +18,26 @@ user = os.environ.get('REDSHIFT_USER')
 password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce = os.environ.get('WCKEY')
 
-#def create_redshift_connection():
-#    return psycopg2.connect(
-#        host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com',
-#        port=5439,
-#        dbname=dbname,
-#        user=user,
-#        password=password
-#)
-
-
 def verify_woocommerce_signature(request, woocommerce):
-    # Récupérer la signature envoyée dans les en-têtes
     received_signature = request.headers.get('X-WC-Webhook-Signature')
-
-    # Calculer votre propre signature avec la charge utile et la clé secrète
     request_payload = request.get_data(as_text=True)
     generated_signature = hmac.new(woocommerce.encode(), request_payload.encode(), hashlib.sha256).hexdigest()
-
-    # Comparer les deux signatures
     return hmac.compare_digest(received_signature, generated_signature)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     if not verify_woocommerce_signature(request, woocommerce):
-        print("Signature non valide, requête suspecte")
+        logger.error("Signature non valide, requête suspecte")
         return 'Signature non valide', 403
 
-    # Signature valide, traiter la requête
-    print("Webhook reçu :")
-    print(request.json)  # Imprime les données JSON envoyées par WooCommerce
-    
-    # Répondre à WooCommerce pour indiquer que le webhook a été reçu avec succès
-    return '', 200
+    try:
+        # Traitement de la requête
+        logger.info("Webhook reçu :")
+        logger.info(request.json)
+        return '', 200
+    except Exception as e:
+        logger.exception("Erreur lors du traitement du webhook: %s", e)
+        return 'Erreur interne du serveur', 500
 
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
