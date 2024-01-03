@@ -4,6 +4,7 @@ import hmac
 import os
 import logging
 import base64
+import psycopg2
 
 app = Flask(__name__)
 
@@ -18,6 +19,26 @@ dbname = os.environ.get('REDSHIFT_DBNAME')
 user = os.environ.get('REDSHIFT_USER')
 password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce_secret = os.environ.get('WC_KEY')
+
+
+def get_dpe_data(note_dpe):
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
+    with conn.cursor() as cursor:
+        query = """
+        SELECT DISTINCT p.n_dpe AS num_dpe, MAX(lastname) AS nom, MAX(firstname) AS prenom,
+        MAX(tel_mobile) AS tel_mobile, MAX(email) AS email, MAX(zipcode) AS code_postal,
+        MAX(etiquette_dpe) AS note_dpe  
+        FROM vw_principale_tel_mobile p
+        LEFT JOIN fact_dpe d ON d.n_dpe = p.n_dpe
+        WHERE type_batiment = 'maison' AND etiquette_dpe = %s
+        GROUP BY p.n_dpe
+        LIMIT 75;
+        """
+        cursor.execute(query, (note_dpe,))
+        rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 
 def verify_woocommerce_signature(request, woocommerce_secret):
     # Log tous les en-têtes pour le débogage
@@ -41,8 +62,8 @@ def verify_woocommerce_signature(request, woocommerce_secret):
     # Comparaison des signatures en bytes
     signature_valid = hmac.compare_digest(received_signature_bytes, generated_signature_bytes)
 
-    logger.debug(f"Signature reçue (décodée): {received_signature_bytes}")
-    logger.debug(f"Signature générée (bytes): {generated_signature_bytes}")
+    #logger.debug(f"Signature reçue (décodée): {received_signature_bytes}")
+    #logger.debug(f"Signature générée (bytes): {generated_signature_bytes}")
 
     return signature_valid
 
@@ -51,48 +72,37 @@ def verify_woocommerce_signature(request, woocommerce_secret):
 
 @app.route('/wcwebhook', methods=['POST'])
 def webhook():
-    # Vérifier si la clé secrète est définie
     if woocommerce_secret is None:
         logger.error("La clé secrète WooCommerce n'est pas définie.")
         return 'Erreur de configuration du serveur', 500
 
-    # Vérifier et traiter la signature du webhook
     if not verify_woocommerce_signature(request, woocommerce_secret):
         logger.error("Signature non valide ou manquante dans la requête.")
         return 'Signature non valide', 403
 
     try:
-        # Traitement de la requête
         order_data = request.json
-        logger.info("Webhook reçu avec succès pour une commande.")
-        
-        # Exemple de données que vous pourriez vouloir logger :
-        order_id = order_data.get('id')
-        order_status = order_data.get('status')
-        order_total = order_data.get('total')
-        customer_id = order_data.get('customer_id')
-        date_created = order_data.get('date_created')
         items = order_data.get('line_items', [])
+        note_dpe_from_order = None
+        for item in items:
+            item_name = item.get('name', '')
+            if '-' in item_name:
+                note_dpe_from_order = item_name.split('-')[-1].strip()
+                break
 
-        # Créer un résumé de la commande
-        order_summary = {
-            'Order ID': order_id,
-            'Status': order_status,
-            'Total': order_total,
-            'Customer ID': customer_id,
-            'Date Created': date_created,
-            'Items': [{'Name': item.get('name'), 'Quantity': item.get('quantity')} for item in items]
-        }
-        
-        # Log le résumé de la commande
-        logger.debug("Résumé de la commande : %s", order_summary)
-
-        # Ici, vous pouvez ajouter d'autres traitements, comme stocker les données dans une base de données ou déclencher d'autres actions
+        if note_dpe_from_order:
+            logger.info(f"Note DPE extraite de la commande : {note_dpe_from_order}")
+            dpe_data = get_dpe_data(note_dpe_from_order)
+            logger.info(f"Données DPE récupérées : {dpe_data}")
+            # Effectuer des actions supplémentaires avec les données DPE si nécessaire
+        else:
+            logger.error("Aucune note DPE trouvée dans les articles de la commande.")
 
         return 'Webhook traité avec succès', 200
     except Exception as e:
         logger.exception("Erreur lors du traitement du webhook: %s", e)
         return 'Erreur interne du serveur', 500
+
 
     
 @app.route('/')
