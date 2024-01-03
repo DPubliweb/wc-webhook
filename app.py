@@ -57,17 +57,23 @@ def home():
 
 
 @app.route('/test-webhook', methods=['POST'])
-def test_webhook():
-    # Logger les en-têtes et les données de la requête
-    logger.debug("En-têtes : %s", request.headers)
-    logger.debug("Données form-encoded : %s", request.form)
+def webhook():
+    # Vérifier la signature du webhook
+    if not verify_woocommerce_signature(request, woocommerce_secret):
+        logger.error("Signature non valide ou manquante dans la requête.")
+        return 'Signature non valide', 403
 
-    # Répondre avec les données reçues pour débogage
-    response_data = {
-        "headers": dict(request.headers),
-        "body": request.form
-    }
-    return jsonify(response_data), 200
+    try:
+        # Traitement des données JSON
+        data = request.json
+        logger.debug("Données JSON reçues : %s", data)
+
+        # Votre logique de traitement ici...
+
+        return 'Webhook traité avec succès', 200
+    except Exception as e:
+        logger.exception("Erreur lors du traitement du webhook: %s", e)
+        return 'Erreur interne du serveur', 500
 
 
 if __name__ == '__main__':
