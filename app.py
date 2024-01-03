@@ -20,14 +20,19 @@ woocommerce_secret = os.environ.get('WC_KEY')
 
 def verify_woocommerce_signature(request, woocommerce_secret):
     received_signature = request.headers.get('X-WC-Webhook-Signature')
-    
-    # Vérifier si la signature reçue est présente
+
     if received_signature is None:
+        logger.error("Aucune signature Webhook WooCommerce trouvée")
         return False
 
     request_payload = request.get_data(as_text=True)
     generated_signature = hmac.new(woocommerce_secret.encode(), request_payload.encode(), hashlib.sha256).hexdigest()
+
+    logger.debug(f"Signature reçue: {received_signature}")
+    logger.debug(f"Signature générée: {generated_signature}")
+
     return hmac.compare_digest(received_signature, generated_signature)
+
 
 
 @app.route('/wcwebhook', methods=['POST'])
