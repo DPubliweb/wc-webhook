@@ -57,7 +57,7 @@ def home():
 
 
 @app.route('/test-webhook', methods=['POST'])
-def webhook():
+def test_webhook():
     # Vérifier la signature du webhook
     if not verify_woocommerce_signature(request, woocommerce_secret):
         logger.error("Signature non valide ou manquante dans la requête.")
