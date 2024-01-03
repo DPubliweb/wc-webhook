@@ -38,6 +38,11 @@ def webhook():
     except Exception as e:
         logger.exception("Erreur lors du traitement du webhook: %s", e)
         return 'Erreur interne du serveur', 500
+    
+@app.route('/')
+def home():
+    return "hello world"
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
