@@ -22,7 +22,7 @@ woocommerce_secret = os.environ.get('WC_KEY')
 
 
 def get_dpe_data(note_dpe):
-    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com', port=5349)
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com', port=5439)
     with conn.cursor() as cursor:
         query = """
         SELECT DISTINCT p.n_dpe AS num_dpe, MAX(lastname) AS nom, MAX(firstname) AS prenom,
