@@ -20,11 +20,14 @@ password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce_secret = os.environ.get('WC_KEY')
 
 def verify_woocommerce_signature(request, woocommerce_secret):
-    received_signature_base64 = request.headers.get('X-WC-Webhook-Signature')
+    # Log tous les en-têtes pour le débogage
+    logger.debug("En-têtes reçus : %s", request.headers)
 
+    received_signature_base64 = request.headers.get('X-WC-Webhook-Signature')
     if received_signature_base64 is None:
-        logger.error("Aucune signature Webhook WooCommerce trouvée")
+        logger.error("Aucune signature Webhook WooCommerce trouvée dans les en-têtes.")
         return False
+
 
     request_payload = request.get_data(as_text=True)
     logger.debug(f"Corps de la requête pour la génération de la signature: {request_payload}")
