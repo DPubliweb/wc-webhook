@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import hashlib
 import hmac
 import os
@@ -54,6 +54,21 @@ def webhook():
 @app.route('/')
 def home():
     return "hello world"
+
+
+@app.route('/test-webhook', methods=['POST'])
+def test_webhook():
+    # Logger l'ensemble de la requête
+    logger.debug("Requête reçue :")
+    logger.debug("En-têtes : %s", request.headers)
+    logger.debug("Données : %s", request.get_data(as_text=True))
+
+    # Répondre avec les données reçues pour débogage
+    response_data = {
+        "headers": dict(request.headers),
+        "body": request.json
+    }
+    return jsonify(response_data), 200
 
 
 if __name__ == '__main__':
