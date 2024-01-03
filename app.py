@@ -16,7 +16,7 @@ port = os.environ.get('REDSHIFT_PORT')
 dbname = os.environ.get('REDSHIFT_DBNAME')
 user = os.environ.get('REDSHIFT_USER')
 password = os.environ.get('REDSHIFT_PASSWORD')
-woocommerce_secret = os.environ.get('WCKEY')
+woocommerce_secret = os.environ.get('WC_KEY')
 
 def verify_woocommerce_signature(request, woocommerce_secret):
     received_signature = request.headers.get('X-WC-Webhook-Signature')
