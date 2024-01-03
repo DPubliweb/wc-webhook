@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import os
 import logging
+import base64
 
 app = Flask(__name__)
 
@@ -19,21 +20,28 @@ password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce_secret = os.environ.get('WC_KEY')
 
 def verify_woocommerce_signature(request, woocommerce_secret):
-    received_signature = request.headers.get('X-WC-Webhook-Signature')
+    received_signature_base64 = request.headers.get('X-WC-Webhook-Signature')
 
-    if received_signature is None:
+    if received_signature_base64 is None:
         logger.error("Aucune signature Webhook WooCommerce trouvée")
         return False
 
-    # Assurez-vous de ne pas modifier le corps de la requête de quelque manière que ce soit avant de le passer à la fonction de hachage
     request_payload = request.get_data(as_text=True)
     logger.debug(f"Corps de la requête pour la génération de la signature: {request_payload}")
 
-    generated_signature = hmac.new(woocommerce_secret.encode(), request_payload.encode(), hashlib.sha256).hexdigest()
-    logger.debug(f"Signature reçue: {received_signature}")
-    logger.debug(f"Signature générée: {generated_signature}")
+    # Décoder la signature reçue de Base64 en bytes
+    received_signature_bytes = base64.b64decode(received_signature_base64)
+    
+    # Générer la signature HMAC en tant que bytes
+    generated_signature_bytes = hmac.new(woocommerce_secret.encode(), request_payload.encode(), hashlib.sha256).digest()
 
-    return hmac.compare_digest(received_signature, generated_signature)
+    # Comparaison des signatures en bytes
+    signature_valid = hmac.compare_digest(received_signature_bytes, generated_signature_bytes)
+
+    logger.debug(f"Signature reçue (décodée): {received_signature_bytes}")
+    logger.debug(f"Signature générée (bytes): {generated_signature_bytes}")
+
+    return signature_valid
 
 
 
