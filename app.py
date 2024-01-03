@@ -63,12 +63,37 @@ def webhook():
 
     try:
         # Traitement de la requête
-        logger.debug("Webhook reçu :")
-        logger.debug(request.json)
-        return 'Webhook reçu avec succès', 200
+        order_data = request.json
+        logger.info("Webhook reçu avec succès pour une commande.")
+        
+        # Exemple de données que vous pourriez vouloir logger :
+        order_id = order_data.get('id')
+        order_status = order_data.get('status')
+        order_total = order_data.get('total')
+        customer_id = order_data.get('customer_id')
+        date_created = order_data.get('date_created')
+        items = order_data.get('line_items', [])
+
+        # Créer un résumé de la commande
+        order_summary = {
+            'Order ID': order_id,
+            'Status': order_status,
+            'Total': order_total,
+            'Customer ID': customer_id,
+            'Date Created': date_created,
+            'Items': [{'Name': item.get('name'), 'Quantity': item.get('quantity')} for item in items]
+        }
+        
+        # Log le résumé de la commande
+        logger.debug("Résumé de la commande : %s", order_summary)
+
+        # Ici, vous pouvez ajouter d'autres traitements, comme stocker les données dans une base de données ou déclencher d'autres actions
+
+        return 'Webhook traité avec succès', 200
     except Exception as e:
         logger.exception("Erreur lors du traitement du webhook: %s", e)
         return 'Erreur interne du serveur', 500
+
     
 @app.route('/')
 def home():
