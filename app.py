@@ -4,7 +4,9 @@ import hmac
 import os
 import logging
 import base64
+import csv
 import psycopg2
+import boto3
 
 app = Flask(__name__)
 
@@ -45,11 +47,31 @@ def get_dpe_data(note_dpe):
                 print(row)
 
         conn.close()
+        write_to_csv(rows, 'dpe_data.csv')
+        bucket_name = "data-dpe"
+        uploaded = upload_to_s3('dpe_data.csv', bucket_name)
+        if uploaded:
+            print("Fichier chargé avec succès dans S3.")
+        else:
+            print("Échec du chargement dans S3.")
         return rows
     except Exception as e:
         print(f"Erreur lors de l'exécution de la requête : {e}")
         return None
 
+
+
+def upload_to_s3(file_name, bucket, object_name=None):
+    if object_name is None:
+        object_name = file_name
+
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_name, bucket, object_name)
+    except Exception as e:
+        print(f"Erreur lors du chargement sur S3 : {e}")
+        return False
+    return True
 
 
 def verify_woocommerce_signature(request, woocommerce_secret):
@@ -79,6 +101,12 @@ def verify_woocommerce_signature(request, woocommerce_secret):
 
     return signature_valid
 
+def write_to_csv(data, filename):
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['num_dpe', 'nom', 'prenom', 'tel_mobile', 'email', 'code_postal', 'note_dpe'])
+        for row in data:
+            writer.writerow(row)
 
 
 
@@ -120,27 +148,6 @@ def webhook():
 @app.route('/')
 def home():
     return "hello world"
-
-
-@app.route('/test-webhook', methods=['POST'])
-def test_webhook():
-    # Vérifier la signature du webhook
-    if not verify_woocommerce_signature(request, woocommerce_secret):
-        logger.error("Signature non valide ou manquante dans la requête.")
-        return 'Signature non valide', 403
-
-    try:
-        # Traitement des données JSON
-        data = request.json
-        logger.debug("Données JSON reçues : %s", data)
-
-        # Votre logique de traitement ici...
-
-        return 'Webhook traité avec succès', 200
-    except Exception as e:
-        logger.exception("Erreur lors du traitement du webhook: %s", e)
-        return 'Erreur interne du serveur', 500
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
