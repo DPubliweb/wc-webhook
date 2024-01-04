@@ -21,6 +21,8 @@ dbname = os.environ.get('REDSHIFT_DBNAME')
 user = os.environ.get('REDSHIFT_USER')
 password = os.environ.get('REDSHIFT_PASSWORD')
 woocommerce_secret = os.environ.get('WC_KEY')
+aws_access_key = os.environ.get('AWS_ACCESS_KEY')
+aws_secret_key = os.environ.get('AWS_SECRET_KEY')
 
 
 def get_dpe_data(note_dpe):
@@ -64,8 +66,11 @@ def get_dpe_data(note_dpe):
 def upload_to_s3(file_name, bucket, object_name=None):
     if object_name is None:
         object_name = file_name
-
-    s3_client = boto3.client('s3')
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key
+    )
     try:
         response = s3_client.upload_file(file_name, bucket, object_name)
     except Exception as e:
