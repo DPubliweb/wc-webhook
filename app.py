@@ -25,7 +25,7 @@ aws_access_key = os.environ.get('AWS_ACCESS_KEY')
 aws_secret_key = os.environ.get('AWS_SECRET_KEY')
 
 
-def get_dpe_data(note_dpe):
+def get_dpe_data(note_dpe, order_id):
     try:
         conn = psycopg2.connect(dbname=dbname, user=user, password=password, host='pw-cluster.cq6jh9anojbf.us-west-2.redshift.amazonaws.com', port=5439)
         print('Début de requête')
@@ -49,7 +49,8 @@ def get_dpe_data(note_dpe):
                 print(row)
 
         conn.close()
-        write_to_csv(rows, 'dpe_data.csv')
+        filename = f"dpe_data_{order_id}.csv"
+        write_to_csv(row, filename)
         bucket_name = "data-dpe"
         uploaded = upload_to_s3('dpe_data.csv', bucket_name)
         if uploaded:
@@ -127,8 +128,11 @@ def webhook():
 
     try:
         order_data = request.json
+        order_id = order_data.get('id')  # Récupération de l'ID de la commande
+        customer_email = order_data.get('billing', {}).get('email')  # Récupération de l'email du client
         items = order_data.get('line_items', [])
         note_dpe_from_order = None
+
         for item in items:
             item_name = item.get('name', '')
             if '-' in item_name:
@@ -137,9 +141,13 @@ def webhook():
 
         if note_dpe_from_order:
             logger.info(f"Note DPE extraite de la commande : {note_dpe_from_order}")
-            dpe_data = get_dpe_data(note_dpe_from_order)
+            dpe_data = get_dpe_data(note_dpe_from_order, order_id)
             logger.info(f"Données DPE récupérées : {dpe_data}")
-            # Effectuer des actions supplémentaires avec les données DPE si nécessaire
+            if customer_email:
+                logger.info(f"Email du client : {customer_email}")
+                # Vous pouvez stocker ou traiter l'email ici
+            else:
+                logger.warning("Aucun email de client trouvé dans la commande.")
         else:
             logger.error("Aucune note DPE trouvée dans les articles de la commande.")
 
