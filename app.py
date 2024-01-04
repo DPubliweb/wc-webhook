@@ -7,6 +7,8 @@ import base64
 import csv
 import psycopg2
 import boto3
+from botocore.exceptions import NoCredentialsError
+
 
 app = Flask(__name__)
 
@@ -57,7 +59,14 @@ def get_dpe_data(note_dpe, order_id):
             print(f"Fichier {filename} chargé avec succès dans S3.")
         else:
             print(f"Échec du chargement du fichier {filename} dans S3.")
+        filename = f"dpe_data_{order_id}.csv"
+        presigned_url = create_presigned_url('data-dpe', filename, expiration=3600)  # URL valide pour 1 heure
+        print(presigned_url)
+        #if presigned_url:
+        #    # Envoyer l'URL par e-mail à l'acheteur
+        #    send_email_with_attachment(customer_email, "Votre fichier DPE", "Veuillez trouver ci-joint le lien pour télécharger votre fichier DPE.", presigned_url)
         return rows
+                
     except Exception as e:
         print(f"Erreur lors de l'exécution de la requête : {e}")
         return None
@@ -78,6 +87,22 @@ def upload_to_s3(file_name, bucket, object_name=None):
         print(f"Erreur lors du chargement sur S3 : {e}")
         return False
     return True
+
+def create_presigned_url(bucket_name, object_name, expiration=3600):
+    s3_client = boto3.client('s3',
+                             aws_access_key_id=aws_access_key,
+                             aws_secret_access_key=aws_secret_key)
+    try:
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': bucket_name,
+                                                            'Key': object_name},
+                                                    ExpiresIn=expiration)
+    except NoCredentialsError:
+        print("Les identifiants pour accéder à AWS S3 n'ont pas été trouvés.")
+        return None
+
+    return response
+
 
 
 def verify_woocommerce_signature(request, woocommerce_secret):
