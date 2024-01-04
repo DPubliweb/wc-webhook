@@ -50,13 +50,13 @@ def get_dpe_data(note_dpe, order_id):
 
         conn.close()
         filename = f"dpe_data_{order_id}.csv"
-        write_to_csv(row, filename)
+        write_to_csv(rows, filename)  # Assurez-vous d'utiliser 'rows' au lieu de 'row'
         bucket_name = "data-dpe"
-        uploaded = upload_to_s3('dpe_data.csv', bucket_name)
+        uploaded = upload_to_s3(filename, bucket_name)  # Utiliser 'filename' ici
         if uploaded:
-            print("Fichier chargé avec succès dans S3.")
+            print(f"Fichier {filename} chargé avec succès dans S3.")
         else:
-            print("Échec du chargement dans S3.")
+            print(f"Échec du chargement du fichier {filename} dans S3.")
         return rows
     except Exception as e:
         print(f"Erreur lors de l'exécution de la requête : {e}")
@@ -130,6 +130,7 @@ def webhook():
         order_data = request.json
         order_id = order_data.get('id')  # Récupération de l'ID de la commande
         customer_email = order_data.get('billing', {}).get('email')  # Récupération de l'email du client
+        print(customer_email)
         items = order_data.get('line_items', [])
         note_dpe_from_order = None
 
